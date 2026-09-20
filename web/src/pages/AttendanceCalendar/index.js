@@ -29,10 +29,9 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
     const key = keyFor(date);
     const calendar = calendarYears[date.getFullYear()];
     const holiday = calendar?.holidays?.includes(key) || false;
-    const adjustedWorkday = calendar?.adjustedWorkdays?.includes(key) || false;
     const holidayName = calendar?.holidayNames?.[key] || null;
     const weekend = date.getDay() === 0 || date.getDay() === 6;
-    return { holiday, holidayName, adjustedWorkday, workday: adjustedWorkday || (!holiday && !weekend) };
+    return { holiday, holidayName, weekend, workday: !holiday && !weekend, editable: !weekend || holiday };
   }
 
   const days = useMemo(() => {
@@ -79,7 +78,7 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
   }
 
   function cycleDay(date) {
-    if (!getDayRule(date).workday) return;
+    if (!getDayRule(date).editable) return;
     const key = keyFor(date);
     const currentIndex = STATUS.indexOf(attendance?.[key]);
     onChange(key, STATUS[(currentIndex + 1) % STATUS.length]);
@@ -112,16 +111,16 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
             const savedStatus = attendance?.[key];
             const status = STATUS.includes(savedStatus) ? savedStatus : undefined;
             const isToday = key === keyFor(today);
-            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
             const isOutsideMonth = date.getMonth() !== month;
             const dayRule = getDayRule(date);
+            const canEdit = dayRule.editable && !isOutsideMonth;
+            const hasStatus = status && canEdit;
             return (
-              <Pressable disabled={!dayRule.workday || isOutsideMonth} key={`${key}-${index}`} onPress={() => cycleDay(date)} style={[styles.dayCell, !dayRule.workday && !isOutsideMonth && styles.weekendCell, status && dayRule.workday && styles[`${status}Cell`], isOutsideMonth && styles.outsideMonthCell, isToday && !isOutsideMonth && styles.todayCell]}>
-                <Text style={[styles.dayNumber, !dayRule.workday && !isOutsideMonth && styles.weekendNumber, status && dayRule.workday && styles[`${status}Number`], isOutsideMonth && styles.outsideMonthNumber]}>{date.getDate()}</Text>
+              <Pressable disabled={!canEdit} key={`${key}-${index}`} onPress={() => cycleDay(date)} style={[styles.dayCell, !canEdit && !isOutsideMonth && styles.weekendCell, hasStatus && styles[`${status}Cell`], isOutsideMonth && styles.outsideMonthCell, isToday && !isOutsideMonth && styles.todayCell]}>
+                <Text style={[styles.dayNumber, !canEdit && !isOutsideMonth && styles.weekendNumber, hasStatus && styles[`${status}Number`], isOutsideMonth && styles.outsideMonthNumber]}>{date.getDate()}</Text>
                 {dayRule.holiday && <Text style={[styles.dayBadge, styles.holidayBadge]}>假</Text>}
-                {dayRule.adjustedWorkday && <Text style={[styles.dayBadge, styles.workBadge]}>班</Text>}
                 {dayRule.holidayName && <Text style={styles.holidayName}>{dayRule.holidayName}</Text>}
-                {status && dayRule.workday && <View style={[styles.statusDot, styles[`${status}Dot`]]} />}
+                {hasStatus && <View style={[styles.statusDot, styles[`${status}Dot`]]} />}
               </Pressable>
             );
           })}
@@ -132,7 +131,6 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
           <View style={styles.legendItem}><View style={[styles.legendDot, styles.absentDot]} /><Text style={styles.legendText}>WFH</Text></View>
           <View style={styles.legendItem}><View style={[styles.legendDot, styles.leaveDot]} /><Text style={styles.legendText}>请假</Text></View>
           <View style={styles.legendItem}><Text style={[styles.legendBadge, styles.holidayBadge]}>假</Text><Text style={styles.legendText}>法定假日</Text></View>
-          <View style={styles.legendItem}><Text style={[styles.legendBadge, styles.workBadge]}>班</Text><Text style={styles.legendText}>调休上班</Text></View>
           <Text style={styles.formula}>出勤率 = WIO 工作日 /（应出勤 − 请假）</Text>
         </View>
         <View style={styles.todayButtonRow}>

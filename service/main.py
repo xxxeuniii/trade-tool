@@ -133,7 +133,7 @@ def short_china_holiday_name(name: str) -> str:
 
 @app.get("/api/calendars/{year}")
 def get_calendars(year: int):
-    """Return Chinese workday adjustments and exchange holiday dates for one year."""
+    """Return Chinese statutory holidays and exchange holiday dates for one year."""
     if year < 2000 or year > 2100:
         raise HTTPException(status_code=400, detail="year must be between 2000 and 2100")
 
@@ -157,9 +157,7 @@ def get_calendars(year: int):
     adjusted_workdays = []
     for current in dates_in_year(year):
         key = current.isoformat()
-        if current.weekday() >= 5 and china.is_working_day(current):
-            adjusted_workdays.append(key)
-        elif current in attendance_holiday_dates:
+        if current in attendance_holiday_dates:
             attendance_holidays.append(key)
 
     holiday_names = {}
