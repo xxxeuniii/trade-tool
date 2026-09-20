@@ -98,6 +98,7 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
             return (
               <Pressable disabled={!canEdit} key={`${key}-${index}`} onPress={() => cycleDay(date)} style={[styles.dayCell, !hasStatus && dayRule.weekend && !dimOutsideMonth && styles.weekendCell, hasStatus && styles[`${status}Cell`], dimOutsideMonth && styles.outsideMonthCell, isToday && !isOutsideMonth && styles.todayCell]}>
                 <Text style={[styles.dayNumber, !hasStatus && dayRule.weekend && !dimOutsideMonth && styles.weekendNumber, hasStatus && styles[`${status}Number`], dimOutsideMonth && styles.outsideMonthNumber]}>{date.getDate()}</Text>
+                {status === "holiday" && canEdit && <Text style={[styles.dayBadge, styles.holidayBadge]}>假</Text>}
                 {hasStatus && <View style={[styles.statusDot, styles[`${status}Dot`]]} />}
               </Pressable>
             );
