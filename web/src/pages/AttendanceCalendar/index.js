@@ -113,11 +113,12 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
             const isToday = key === keyFor(today);
             const isOutsideMonth = date.getMonth() !== month;
             const dayRule = getDayRule(date);
-            const canEdit = dayRule.editable && !isOutsideMonth;
+            const canEdit = dayRule.editable && (!isOutsideMonth || dayRule.holiday);
+            const dimOutsideMonth = isOutsideMonth && !dayRule.holiday;
             const hasStatus = status && canEdit;
             return (
-              <Pressable disabled={!canEdit} key={`${key}-${index}`} onPress={() => cycleDay(date)} style={[styles.dayCell, !canEdit && !isOutsideMonth && styles.weekendCell, hasStatus && styles[`${status}Cell`], isOutsideMonth && styles.outsideMonthCell, isToday && !isOutsideMonth && styles.todayCell]}>
-                <Text style={[styles.dayNumber, !canEdit && !isOutsideMonth && styles.weekendNumber, hasStatus && styles[`${status}Number`], isOutsideMonth && styles.outsideMonthNumber]}>{date.getDate()}</Text>
+              <Pressable disabled={!canEdit} key={`${key}-${index}`} onPress={() => cycleDay(date)} style={[styles.dayCell, dayRule.holiday && !hasStatus && styles.holidayCell, !canEdit && !dimOutsideMonth && styles.weekendCell, hasStatus && styles[`${status}Cell`], dimOutsideMonth && styles.outsideMonthCell, isToday && !isOutsideMonth && styles.todayCell]}>
+                <Text style={[styles.dayNumber, !canEdit && !dimOutsideMonth && styles.weekendNumber, dayRule.holiday && !hasStatus && styles.holidayNumber, hasStatus && styles[`${status}Number`], dimOutsideMonth && styles.outsideMonthNumber]}>{date.getDate()}</Text>
                 {dayRule.holiday && <Text style={[styles.dayBadge, styles.holidayBadge]}>假</Text>}
                 {dayRule.holidayName && <Text style={styles.holidayName}>{dayRule.holidayName}</Text>}
                 {hasStatus && <View style={[styles.statusDot, styles[`${status}Dot`]]} />}
