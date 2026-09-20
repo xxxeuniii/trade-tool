@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { fetchCalendarYear } from "../../calendarApi";
 import styles from "./styles";
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
-const STATUS = [undefined, "present", "absent", "leave"];
+const STATUS = [undefined, "present", "absent", "leave", "holiday"];
 
 function keyFor(date) {
   const year = date.getFullYear();
@@ -16,7 +15,6 @@ function keyFor(date) {
 export default function AttendanceCalendar({ attendance, onChange, onMonthChange, isDesktop }) {
   const today = new Date();
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-  const [calendarYears, setCalendarYears] = useState({});
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
@@ -25,13 +23,10 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
     onMonthChange(monthKey);
   }, [monthKey]);
 
-  function getDayRule(date) {
-    const key = keyFor(date);
-    const calendar = calendarYears[date.getFullYear()];
-    const holiday = calendar?.holidays?.includes(key) || false;
-    const holidayName = calendar?.holidayNames?.[key] || null;
+  function getDayRule(date, status) {
     const weekend = date.getDay() === 0 || date.getDay() === 6;
-    return { holiday, holidayName, weekend, workday: !holiday && !weekend, editable: !weekend || holiday };
+    const holiday = status === "holiday";
+    return { holiday, weekend, workday: !holiday && !weekend };
   }
 
   const days = useMemo(() => {
@@ -42,25 +37,10 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
     );
   }, [year, month]);
 
-  useEffect(() => {
-    const years = [...new Set(days.map((date) => date.getFullYear()))];
-    let active = true;
-    Promise.all(years.map((value) => fetchCalendarYear(value)))
-      .then((results) => {
-        if (!active) return;
-        setCalendarYears((current) => ({
-          ...current,
-          ...Object.fromEntries(results.map((result) => [result.year, result.attendance])),
-        }));
-      })
-      .catch((error) => console.error("Failed to load holiday calendar", error));
-    return () => { active = false; };
-  }, [days]);
-
   const stats = useMemo(() => {
     const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
     const workdayKeys = days
-      .filter((date) => date.getMonth() === month && getDayRule(date).workday)
+      .filter((date) => date.getMonth() === month && getDayRule(date, attendance?.[keyFor(date)]).workday)
       .map(keyFor);
     const entries = Object.entries(attendance || {}).filter(
       ([key]) => key.startsWith(monthPrefix) && workdayKeys.includes(key)
@@ -71,14 +51,13 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
     const expected = workdayKeys.length;
     const actual = expected - leave;
     return { present, leave, absent, expected, actual, rate: actual ? ((present / actual) * 100).toFixed(1) : "0.0" };
-  }, [attendance, days, year, month, calendarYears]);
+  }, [attendance, days, year, month]);
 
   function moveMonth(step) {
     setCursor(new Date(year, month + step, 1));
   }
 
   function cycleDay(date) {
-    if (!getDayRule(date).editable) return;
     const key = keyFor(date);
     const currentIndex = STATUS.indexOf(attendance?.[key]);
     onChange(key, STATUS[(currentIndex + 1) % STATUS.length]);
@@ -112,15 +91,13 @@ export default function AttendanceCalendar({ attendance, onChange, onMonthChange
             const status = STATUS.includes(savedStatus) ? savedStatus : undefined;
             const isToday = key === keyFor(today);
             const isOutsideMonth = date.getMonth() !== month;
-            const dayRule = getDayRule(date);
-            const canEdit = dayRule.editable && (!isOutsideMonth || dayRule.holiday);
-            const dimOutsideMonth = isOutsideMonth && !dayRule.holiday;
+            const dayRule = getDayRule(date, status);
+            const canEdit = !isOutsideMonth && !dayRule.weekend;
+            const dimOutsideMonth = isOutsideMonth;
             const hasStatus = status && canEdit;
             return (
-              <Pressable disabled={!canEdit} key={`${key}-${index}`} onPress={() => cycleDay(date)} style={[styles.dayCell, dayRule.holiday && !hasStatus && styles.holidayCell, !canEdit && !dimOutsideMonth && styles.weekendCell, hasStatus && styles[`${status}Cell`], dimOutsideMonth && styles.outsideMonthCell, isToday && !isOutsideMonth && styles.todayCell]}>
-                <Text style={[styles.dayNumber, !canEdit && !dimOutsideMonth && styles.weekendNumber, dayRule.holiday && !hasStatus && styles.holidayNumber, hasStatus && styles[`${status}Number`], dimOutsideMonth && styles.outsideMonthNumber]}>{date.getDate()}</Text>
-                {dayRule.holiday && <Text style={[styles.dayBadge, styles.holidayBadge]}>假</Text>}
-                {dayRule.holidayName && <Text style={styles.holidayName}>{dayRule.holidayName}</Text>}
+              <Pressable disabled={!canEdit} key={`${key}-${index}`} onPress={() => cycleDay(date)} style={[styles.dayCell, !hasStatus && dayRule.weekend && !dimOutsideMonth && styles.weekendCell, hasStatus && styles[`${status}Cell`], dimOutsideMonth && styles.outsideMonthCell, isToday && !isOutsideMonth && styles.todayCell]}>
+                <Text style={[styles.dayNumber, !hasStatus && dayRule.weekend && !dimOutsideMonth && styles.weekendNumber, hasStatus && styles[`${status}Number`], dimOutsideMonth && styles.outsideMonthNumber]}>{date.getDate()}</Text>
                 {hasStatus && <View style={[styles.statusDot, styles[`${status}Dot`]]} />}
               </Pressable>
             );

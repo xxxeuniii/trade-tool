@@ -46,6 +46,7 @@ const styles = StyleSheet.create({
   workBadge: { color: "#175cd3", backgroundColor: "#dbeafe" },
   presentDot: { backgroundColor: "#2563eb" },
   leaveDot: { backgroundColor: "#d9a514" },
+  holidayDot: { backgroundColor: "#b42318" },
   absentDot: { backgroundColor: palette.profitRed },
   legend: { marginTop: 14, paddingTop: 14, paddingHorizontal: 10, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 13 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },

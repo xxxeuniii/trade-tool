@@ -40,7 +40,7 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS trade_tool_attendance (
                 attendance_date TEXT PRIMARY KEY,
-                status TEXT NOT NULL CHECK (status IN ('present', 'leave', 'absent')),
+                status TEXT NOT NULL CHECK (status IN ('present', 'leave', 'absent', 'holiday')),
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE IF NOT EXISTS trade_tool_history (
@@ -57,7 +57,7 @@ def init_db():
                 DROP CONSTRAINT IF EXISTS trade_tool_attendance_status_check;
             ALTER TABLE trade_tool_attendance
                 ADD CONSTRAINT trade_tool_attendance_status_check
-                CHECK (status IN ('present', 'leave', 'absent'));
+                CHECK (status IN ('present', 'leave', 'absent', 'holiday'));
             """
         )
         cursor.execute(
@@ -67,7 +67,7 @@ def init_db():
                 IF to_regclass('public.attendance_record') IS NOT NULL THEN
                     INSERT INTO trade_tool_attendance (attendance_date, status, updated_at)
                     SELECT attendance_date, status, updated_at FROM attendance_record
-                    WHERE status IN ('present', 'leave', 'absent')
+                    WHERE status IN ('present', 'leave', 'absent', 'holiday')
                     ON CONFLICT (attendance_date) DO NOTHING;
                 END IF;
                 IF to_regclass('public.trade_history') IS NOT NULL THEN
@@ -89,7 +89,7 @@ def startup():
 
 class AttendancePayload(BaseModel):
     date: str
-    status: Literal["present", "leave", "absent"] | None = None
+    status: Literal["present", "leave", "absent", "holiday"] | None = None
 
 
 class HistoryPayload(BaseModel):
